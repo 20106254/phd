@@ -1,5 +1,52 @@
+<!DOCTYPE html>
 <html>
+<head>
+    <title>Dairy Survey Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .response { border: 1px solid #ddd; padding: 15px; margin: 10px 0; }
+        .answers { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Survey Results</h1>
+    <div id="responses"></div>
 
-    <p>hello</p>
+    <script>
+        async function loadFormData() {
+            try {
+                const response = await fetch('form_responses.json');
+                const data = await response.json();
+                displayResponses(data);
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
 
+        function displayResponses(responses) {
+            const container = document.getElementById('responses');
+            
+            responses.forEach(response => {
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'response';
+                
+                responseDiv.innerHTML = `
+                    <strong>Submitted:</strong> ${new Date(response.submitDate).toLocaleString()}<br>
+                    <strong>Responder:</strong> ${response.responder || 'Anonymous'}<br>
+                    <div class="answers">
+                        ${Object.entries(response.answers).map(([q, a]) => 
+                            `<div><strong>${q}:</strong> ${a}</div>`
+                        ).join('')}
+                    </div>
+                `;
+                
+                container.appendChild(responseDiv);
+            });
+        }
+
+        // Load data on page load
+        loadFormData();
+    </script>
+</body>
 </html>
+
