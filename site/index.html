@@ -1,15 +1,15 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Farm Survey Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial;
-            margin: 0;
-            padding: 30px;
             background: #f7f8fa;
+            margin: 0;
+            padding: 25px;
         }
 
         h1 {
@@ -18,17 +18,19 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 16px;
         }
 
-        iframe {
-            width: 100%;
-            height: 380px;
-            border: none;
+        .card {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+
+        .chart {
+            height: 360px;
         }
     </style>
 </head>
@@ -37,50 +39,73 @@
 
 <h1>Farm Survey Dashboard</h1>
 
-<div class="grid">
-<iframe src="charts/chart_5.html"></iframe>
-<iframe src="charts/chart_6.html"></iframe>
-<iframe src="charts/chart_7.html"></iframe>
-<iframe src="charts/chart_8.html"></iframe>
-<iframe src="charts/chart_9.html"></iframe>
-<iframe src="charts/chart_10.html"></iframe>
-<iframe src="charts/chart_11.html"></iframe>
-<iframe src="charts/chart_12.html"></iframe>
-<iframe src="charts/chart_13.html"></iframe>
-<iframe src="charts/chart_14.html"></iframe>
-<iframe src="charts/chart_15.html"></iframe>
-<iframe src="charts/chart_16.html"></iframe>
-<iframe src="charts/chart_17.html"></iframe>
-<iframe src="charts/chart_18.html"></iframe>
-<iframe src="charts/chart_19.html"></iframe>
-<iframe src="charts/chart_20.html"></iframe>
-<iframe src="charts/chart_21.html"></iframe>
-<iframe src="charts/chart_22.html"></iframe>
-<iframe src="charts/chart_23.html"></iframe>
-<iframe src="charts/chart_24.html"></iframe>
-<iframe src="charts/chart_25.html"></iframe>
-<iframe src="charts/chart_26.html"></iframe>
-<iframe src="charts/chart_27.html"></iframe>
-<iframe src="charts/chart_28.html"></iframe>
-<iframe src="charts/chart_29.html"></iframe>
-<iframe src="charts/chart_30.html"></iframe>
-<iframe src="charts/chart_31.html"></iframe>
-<iframe src="charts/chart_32.html"></iframe>
-<iframe src="charts/chart_33.html"></iframe>
-<iframe src="charts/chart_34.html"></iframe>
-<iframe src="charts/chart_35.html"></iframe>
-<iframe src="charts/chart_36.html"></iframe>
-<iframe src="charts/chart_37.html"></iframe>
-<iframe src="charts/chart_38.html"></iframe>
-<iframe src="charts/chart_39.html"></iframe>
-<iframe src="charts/chart_40.html"></iframe>
-<iframe src="charts/chart_41.html"></iframe>
-<iframe src="charts/chart_42.html"></iframe>
-<iframe src="charts/chart_43.html"></iframe>
-<iframe src="charts/chart_44.html"></iframe>
-<iframe src="charts/chart_45.html"></iframe>
+<div class="grid" id="dashboard"></div>
 
-</div>
+<script>
+
+fetch("data.json")
+.then(res => res.json())
+.then(data => {
+
+    const container = document.getElementById("dashboard");
+
+    if (data.length === 0) return;
+
+    const columns = Object.keys(data[0]);
+
+    columns.forEach(col => {
+
+        const values = data.map(d => d[col]).filter(v => v !== "");
+
+        const div = document.createElement("div");
+        div.className = "card";
+
+        const chartDiv = document.createElement("div");
+        chartDiv.className = "chart";
+        chartDiv.id = "chart_" + col.replace(/\s/g, "_");
+
+        div.appendChild(chartDiv);
+        container.appendChild(div);
+
+        // Detect numeric
+        const numeric = values.filter(v => !isNaN(v)).map(Number);
+        const isNumeric = numeric.length > values.length * 0.6;
+
+        if (isNumeric) {
+
+            Plotly.newPlot(chartDiv.id, [{
+                y: numeric,
+                type: "box"
+            }], {
+                title: col,
+                margin: { t: 40 }
+            });
+
+        } else {
+
+            const freq = {};
+            values.forEach(v => {
+                freq[v] = (freq[v] || 0) + 1;
+            });
+
+            const keys = Object.keys(freq).slice(0, 15);
+            const vals = keys.map(k => freq[k]);
+
+            Plotly.newPlot(chartDiv.id, [{
+                x: vals,
+                y: keys,
+                type: "bar",
+                orientation: "h"
+            }], {
+                title: col,
+                margin: { t: 40 }
+            });
+        }
+    });
+
+});
+
+</script>
 
 </body>
 </html>
