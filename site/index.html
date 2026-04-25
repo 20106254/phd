@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Farm Survey Dashboard</title>
+<title>Intelligent Farm Survey Dashboard</title>
 
 <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
 
 <style>
 
 /* =========================
-   GLOBAL RESET
+   BASE
 ========================= */
 * {
     box-sizing: border-box;
@@ -23,11 +23,10 @@
 body {
     background: #f5f7fa;
     padding: 18px;
-    color: #333;
 }
 
 /* =========================
-   HEADER (ENTERPRISE STYLE)
+   HEADER
 ========================= */
 .dashboard-header {
     background: #1f2a37;
@@ -35,88 +34,57 @@ body {
     padding: 18px 22px;
     border-radius: 10px;
     margin-bottom: 18px;
-
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
 }
 
 .dashboard-header h1 {
     font-size: 1.4rem;
-    font-weight: 600;
-}
-
-.dashboard-header small {
-    opacity: 0.8;
 }
 
 /* =========================
-   GRID SYSTEM (STABLE)
+   GRID
 ========================= */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 16px;
-
     align-items: stretch;
 }
 
 /* =========================
-   ENTERPRISE CARD
+   CARD
 ========================= */
 .dashboard-card {
     background: white;
     border-radius: 10px;
-
-    padding: 14px 14px 10px 14px;
+    padding: 14px;
 
     box-shadow: 0 3px 12px rgba(0,0,0,0.06);
 
+    min-height: 440px;
     display: flex;
     flex-direction: column;
-
-    /* 🔥 KEY FIX: prevents bleed between cards */
-    min-height: 440px;
     overflow: hidden;
 }
 
 /* =========================
-   CARD TITLE
+   TITLE
 ========================= */
 .card-title {
     font-size: 0.95rem;
     font-weight: 600;
     color: #1f2a37;
-
     margin-bottom: 8px;
-    padding-bottom: 6px;
-
     border-bottom: 1px solid #eee;
+    padding-bottom: 6px;
 }
 
 /* =========================
-   CHART AREA
+   CHART
 ========================= */
 .chart-container {
     flex: 1;
-    width: 100%;
     min-height: 340px;
-
-    /* 🔥 prevents Plotly overflow artifacts */
-    overflow: hidden;
-}
-
-/* =========================
-   RESPONSIVE TWEAKS
-========================= */
-@media (max-width: 900px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .dashboard-card {
-        min-height: 420px;
-    }
+    width: 100%;
 }
 
 </style>
@@ -125,8 +93,7 @@ body {
 <body>
 
 <header class="dashboard-header">
-    <h1>Farm Survey Dashboard</h1>
-    <small>Enterprise Analytics View</small>
+    <h1>Intelligent Survey Analytics</h1>
 </header>
 
 <main class="dashboard-grid" id="grid"></main>
@@ -143,9 +110,43 @@ fetch("data.json")
 
     const cols = Object.keys(data[0]);
 
+    // -----------------------------
+    // METADATA FILTER
+    // -----------------------------
+    const ignore = [
+        "id",
+        "start time",
+        "completion time",
+        "email",
+        "name",
+        "privacy"
+    ];
+
+    function isIgnored(col) {
+        return ignore.some(i => col.toLowerCase().includes(i));
+    }
+
+    function isNumericColumn(values) {
+        const nums = values.map(v => Number(v)).filter(v => !isNaN(v));
+        return nums.length / values.length > 0.7;
+    }
+
+    function splitMulti(values) {
+        const freq = {};
+        values.forEach(v => {
+            String(v).split(";").forEach(item => {
+                const k = item.trim();
+                if (k) freq[k] = (freq[k] || 0) + 1;
+            });
+        });
+        return freq;
+    }
+
     cols.forEach(col => {
 
-        const values = data.map(d => d[col]).filter(v => v !== "");
+        if (isIgnored(col)) return;
+
+        const values = data.map(d => d[col]).filter(v => v !== "" && v != null);
 
         if (values.length === 0) return;
 
@@ -165,41 +166,31 @@ fetch("data.json")
         container.appendChild(card);
 
         // =========================
-        // NUMERIC DETECTION (ROBUST)
+        // 1. NUMERIC (REAL ONLY)
         // =========================
-        const numeric = values
-            .map(v => Number(String(v).replace(/[^0-9.\-]/g, "")))
-            .filter(v => !isNaN(v));
+        if (isNumericColumn(values)) {
 
-        const numericRatio = numeric.length / values.length;
-
-        // =========================
-        // BOX PLOT (ENTERPRISE STYLE)
-        // =========================
-        if (numericRatio > 0.6 && numeric.length > 3) {
+            const nums = values.map(v => Number(v)).filter(v => !isNaN(v));
 
             Plotly.newPlot(chartDiv.id, [{
-                y: numeric,
+                y: nums,
                 type: "box",
                 marker: { color: "#4E79A7" },
                 boxpoints: "outliers"
             }], {
                 margin: { t: 20, b: 40, l: 60, r: 10 },
-                responsive: true,
                 displayModeBar: false
             });
 
+            return;
         }
 
         // =========================
-        // BAR CHART (ENTERPRISE STYLE)
+        // 2. MULTI-SELECT
         // =========================
-        else {
+        if (values.some(v => String(v).includes(";"))) {
 
-            const freq = {};
-            values.forEach(v => {
-                freq[v] = (freq[v] || 0) + 1;
-            });
+            const freq = splitMulti(values);
 
             const keys = Object.keys(freq).slice(0, 12);
             const vals = keys.map(k => freq[k]);
@@ -211,23 +202,37 @@ fetch("data.json")
                 orientation: "h",
                 marker: { color: "#1f2a37" }
             }], {
-
-                margin: {
-                    t: 20,
-                    b: 40,
-                    l: 180,
-                    r: 10
-                },
-
-                yaxis: {
-                    automargin: true
-                },
-
-                bargap: 0.35,
-                responsive: true,
+                margin: { t: 20, b: 40, l: 180, r: 10 },
+                yaxis: { automargin: true },
                 displayModeBar: false
             });
+
+            return;
         }
+
+        // =========================
+        // 3. CATEGORICAL (DEFAULT)
+        // =========================
+        const freq = {};
+        values.forEach(v => {
+            const k = String(v).trim();
+            if (k) freq[k] = (freq[k] || 0) + 1;
+        });
+
+        const keys = Object.keys(freq).slice(0, 12);
+        const vals = keys.map(k => freq[k]);
+
+        Plotly.newPlot(chartDiv.id, [{
+            x: vals,
+            y: keys,
+            type: "bar",
+            orientation: "h",
+            marker: { color: "#2c3e37" }
+        }], {
+            margin: { t: 20, b: 40, l: 180, r: 10 },
+            yaxis: { automargin: true },
+            displayModeBar: false
+        });
 
     });
 
