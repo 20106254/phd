@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Farm Survey Dashboard</title>
 
 <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
 
 <style>
 /* =========================
-   BASE STYLING (MATCHED STYLE)
+   BASE
 ========================= */
 * {
     box-sizing: border-box;
@@ -43,26 +45,35 @@ body {
 ========================= */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 18px;
+    align-items: start;
 }
 
 /* =========================
-   CARD STYLE
+   CARD
 ========================= */
 .dashboard-card {
     background: white;
     border-radius: 8px;
-    padding: 18px;
+    padding: 14px 14px 10px 14px;
+
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+
+    /* 🔥 IMPORTANT FIX: prevents overlap */
+    min-height: 440px;
+
     display: flex;
     flex-direction: column;
 }
 
+/* =========================
+   TITLE
+========================= */
 .card-title {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: #2c3e50;
     border-bottom: 1px solid #eee;
     padding-bottom: 6px;
@@ -72,7 +83,8 @@ body {
    CHART AREA
 ========================= */
 .chart-container {
-    height: 280px;
+    flex: 1;
+    min-height: 340px;
     width: 100%;
 }
 </style>
@@ -119,25 +131,36 @@ fetch("data.json")
         card.appendChild(chartDiv);
         container.appendChild(card);
 
-        // ------------------------
-        // DETECT NUMERIC
-        // ------------------------
-        const numeric = values.map(v => Number(v)).filter(v => !isNaN(v));
+        // =========================
+        // NUMERIC DETECTION
+        // =========================
+        const numeric = values
+            .map(v => Number(String(v).replace(/[^0-9.\-]/g, "")))
+            .filter(v => !isNaN(v));
 
         const numericRatio = numeric.length / values.length;
 
-        if (numericRatio > 0.6) {
+        // =========================
+        // BOX PLOT (NUMERIC)
+        // =========================
+        if (numericRatio > 0.6 && numeric.length > 3) {
 
-            // BOX PLOT (LIKE YOUR EXAMPLE STYLE)
             Plotly.newPlot(chartDiv.id, [{
                 y: numeric,
                 type: "box",
-                marker: { color: "#4E79A7" }
+                marker: { color: "#4E79A7" },
+                boxpoints: "outliers"
             }], {
-                margin: { t: 20, b: 20, l: 30, r: 10 }
+                margin: { t: 20, b: 20, l: 60, r: 10 },
+                showlegend: false
             });
 
-        } else {
+        }
+
+        // =========================
+        // BAR CHART (CATEGORICAL)
+        // =========================
+        else {
 
             const freq = {};
             values.forEach(v => {
@@ -152,9 +175,26 @@ fetch("data.json")
                 y: keys,
                 type: "bar",
                 orientation: "h",
-                marker: { color: "#2c3e50" }
+
+                /* 🔥 FIX: thinner bars */
+                marker: { color: "#2c3e50" },
+                width: 0.55
             }], {
-                margin: { t: 20, b: 20, l: 80, r: 10 }
+
+                /* 🔥 FIX: prevents label truncation */
+                margin: {
+                    t: 20,
+                    b: 20,
+                    l: 200,
+                    r: 20
+                },
+
+                yaxis: {
+                    automargin: true
+                },
+
+                bargap: 0.35,
+                showlegend: false
             });
         }
 
